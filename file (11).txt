@@ -39,14 +39,19 @@
         // =====================================================================
         // 🚨 🚨 🚨 STOP HERE: YOU MUST REPLACE THIS CONFIGURATION 🚨 🚨 🚨
         // =====================================================================
-        const firebaseConfig = {
-          apiKey: "YOUR_API_KEY_HERE",
-          authDomain: "your-project.firebaseapp.com",
-          projectId: "your-project",
-          storageBucket: "your-project.appspot.com",
-          messagingSenderId: "123456789",
-          appId: "1:123456789:web:abcdef"
-        };
+       const firebaseConfig = {
+  apiKey: "AIzaSyCvyaUnDOZVxlwzddUJvqwjdHnjtaJhWYU",
+  authDomain: "foodapp-afab7.firebaseapp.com",
+  projectId: "foodapp-afab7",
+  storageBucket: "foodapp-afab7.firebasestorage.app",
+  messagingSenderId: "232132347739",
+  appId: "1:232132347739:web:1a3f35280f898ebc1ffc7e",
+  measurementId: "G-VNB10N9SMC"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
         // =====================================================================
 
         let app, auth, db;
