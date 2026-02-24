@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LickinGood</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel (Allows React code to run directly in the browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Import Map (Safely routes all ES Modules) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.2.0",
+          "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+          "firebase/app": "https://esm.sh/firebase@10.8.1/app",
+          "firebase/firestore": "https://esm.sh/firebase@10.8.1/firestore",
+          "firebase/auth": "https://esm.sh/firebase@10.8.1/auth",
+          "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react"
+        }
+      }
+    </script>
+</head>
+<body class="bg-[#0D0408]">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module" data-presets="react">
+        import React, { useState, useEffect, useMemo, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { initializeApp } from 'firebase/app';
+        import { getFirestore, collection, addDoc, onSnapshot, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+        import { ShoppingBag, Plus, Minus, X, Clock, Bell, Heart, Smartphone, Settings, ShieldCheck, Save, AlertCircle, Flame, Wine, Crown, Gem, Ghost, Stars, Lock, Cloud, Droplets, Zap, Coffee, ThermometerSun, MessageCircle, Send, ExternalLink, Phone, Loader2, Bone, FlameKindling, Grip, ShieldAlert, Infinity, User, Instagram, Check, LogOut, Sparkles, Key, CreditCard, Volume2, VolumeX, ClipboardList, Skull, Megaphone, Mic, StopCircle, Play, Trash2 } from 'lucide-react';
+
+        // =====================================================================
+        // 🚨 🚨 🚨 STOP HERE: YOU MUST REPLACE THIS CONFIGURATION 🚨 🚨 🚨
+        // =====================================================================
+        const firebaseConfig = {
+          apiKey: "YOUR_API_KEY_HERE",
+          authDomain: "your-project.firebaseapp.com",
+          projectId: "your-project",
+          storageBucket: "your-project.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:abcdef"
+        };
+        // =====================================================================
+
+        let app, auth, db;
+        let firebaseFailed = false;
+
+        try {
+          if (firebaseConfig.apiKey === "YOUR_API_KEY_HERE") throw new Error("Missing Config");
+          app = initializeApp(firebaseConfig);
+          auth = getAuth(app);
+          db = getFirestore(app);
+        } catch (e) {
+          firebaseFailed = true;
+        }
+
+        const appId = 'lickin-good-noir-v1';
+
+        const getProxiedUrl = (url) => {
+          if (!url) return 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&q=80';
+          if (url === 'image_4.png') return url;
+          let targetUrl = url;
+          if (url.includes('drive.google.com')) {
+            const parts = url.split('/d/');
+            if (parts.length > 1) {
+              const fileId = parts[1].split('/')[0];
+              targetUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            } else if (url.includes('id=')) {
+              const fileId = url.split('id=')[1].split('&')[0];
+              targetUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            }
+          }
+          return `https://wsrv.nl/?url=${encodeURIComponent(targetUrl)}&n=-1&output=webp&q=85`;
+        };
+
+        const GoddessImage = ({ src, alt, className, isVideo }) => {
+          const [error, setError] = useState(false);
+          const [loading, setLoading] = useState(true);
+          const videoRef = useRef(null);
+          
+          let isDriveVideo = false;
+          let driveFileId = '';
+          let finalSrc = src;
+          if (isVideo && src.includes('drive.google.com')) {
+            isDriveVideo = true;
+            const parts = src.split('/d/');
+            if (parts.length > 1) {
+              driveFileId = parts[1].split('/')[0];
+            } else if (src.includes('id=')) {
+              driveFileId = src.split('id=')[1].split('&')[0];
+            }
+          } else if (!isVideo) {
+            finalSrc = src === 'image_4.png' ? src : getProxiedUrl(src);
+          }
+
+          useEffect(() => {
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+            }
+          }, [finalSrc]);
+
+          if (error && !isDriveVideo) {
+            return (
+              <div className={`relative overflow-hidden bg-black ${className}`}>
+                <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?w=800&q=80" alt={alt} className={`w-full h-full object-cover transition-all duration-1000 ease-in-out opacity-100 group-hover:scale-110 opacity-70`} />
+              </div>
+            );
+          }
+
+          if (isDriveVideo && driveFileId) {
+            return (
+              <div className={`relative overflow-hidden bg-[#0A000A] ${className}`}>
+                {loading && <div className="absolute inset-0 flex items-center justify-center bg-[#0A000A] z-30"><Loader2 className="text-[#FF0055] animate-spin" size={32} /></div>}
+                <div className="absolute inset-0 z-10 overflow-hidden group-hover:scale-110 transition-transform duration-1000 ease-in-out opacity-90">
+                  <iframe src={`https://drive.google.com/file/d/${driveFileId}/preview?autoplay=1&mute=1`} className={`absolute top-1/2 left-1/2 w-[175%] h-[175%] -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-1000 ${loading ? 'opacity-0' : 'opacity-100'}`} frameBorder="0" allow="autoplay" onLoad={() => setLoading(false)} />
+                </div>
+                <div className="absolute inset-0 z-20 bg-transparent pointer-events-auto" />
+              </div>
+            );
+          }
+
+          return (
+            <div className={`relative overflow-hidden bg-[#0A000A] ${className}`}>
+              {loading && <div className="absolute inset-0 flex items-center justify-center bg-[#0A000A] z-10"><Loader2 className="text-[#FF0055] animate-spin" size={32} /></div>}
+              {isVideo ? (
+                <video ref={videoRef} src={finalSrc} className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${loading ? 'opacity-0' : 'opacity-90'} group-hover:scale-110`} onCanPlay={() => setLoading(false)} onError={() => { setError(true); setLoading(false); }} autoPlay loop muted playsInline />
+              ) : (
+                <img src={finalSrc} alt={alt} className={`w-full h-full object-cover transition-all duration-1000 ease-in-out ${loading ? 'opacity-0' : 'opacity-90'} group-hover:scale-110`} onLoad={() => setLoading(false)} onError={() => { setError(true); setLoading(false); }} referrerPolicy="no-referrer" crossOrigin="anonymous" />
+              )}
+            </div>
+          );
+        };
+
+        const LickinGoodLogo = ({ className = "w-32 h-40" }) => (
+          <svg viewBox="0 0 120 150" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="tongueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#FF2A6D" /><stop offset="50%" stopColor="#D81B60" /><stop offset="100%" stopColor="#880E4F" />
+              </linearGradient>
+              <linearGradient id="spearGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#FFB6C1" /><stop offset="50%" stopColor="#FCE4EC" /><stop offset="100%" stopColor="#F48FB1" />
+              </linearGradient>
+              <filter id="glow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <path d="M35 25 C 35 25, 10 10, 20 0 L 40 22 C 50 10, 70 10, 80 22 L 100 0 C 110 10, 85 25, 85 25 C 95 50, 92 80, 75 105 C 65 120, 45 120, 30 100 C 20 85, 17 50, 35 25 Z" fill="#0A0206" stroke="#FFB6C1" strokeWidth="0.8" opacity="0.8"/>
+            <g transform="translate(75, 30) rotate(15)">
+              <rect x="-2" y="0" width="4" height="100" fill="url(#spearGradient)" opacity="0.6" />
+              <path d="M-8 0 L 0 -25 L 8 0 C 8 0, 5 5, 0 5 C -5 5, -8 0, -8 0 Z" fill="url(#spearGradient)" filter="url(#glow)"/>
+            </g>
+            <path d="M42 90 Q 55 100 70 88" stroke="#260714" strokeWidth="3" strokeLinecap="round" />
+            <g transform="translate(68, 85) rotate(-20)">
+              <path d="M-15 0 C -15 0, -22 45, 0 55 C 22 45, 15 0, 15 0 L -15 0 Z" fill="url(#tongueGradient)" stroke="#4A142A" strokeWidth="1">
+                <animate attributeName="d" values="M-15 0 C -15 0, -22 45, 0 55 C 22 45, 15 0, 15 0 L -15 0 Z; M-17 0 C -17 0, -25 52, 0 62 C 25 52, 17 0, 17 0 L -17 0 Z; M-15 0 C -15 0, -22 45, 0 55 C 22 45, 15 0, 15 0 L -15 0 Z" dur="1.2s" repeatCount="indefinite" />
+              </path>
+            </g>
+          </svg>
+        );
+
+        const CATEGORIES = ['All', 'Omakase', 'Chinese', 'Chicken', 'Vietnamese', 'Thai', 'Japanese', 'Western', 'Drinks', 'Dessert'];
+
+        const FOOD_ITEMS = [
+          { 
+            id: 666, name: 'The Sacred Omakase of Total Surrender', price: 99.99, category: 'Omakase', image: 'https://drive.google.com/file/d/1NflBiTmUUfhSE9s0jeG1Ky0uCcAldWDV/view?usp=sharing', isAbsoluteOmakase: true,
+            description: 'You are no longer a person with preferences; you are a mouth meant for my absolute use. By claiming this sacrifice, you acknowledge that your taste buds are my property. Open wide and submit to the void of my decree. 💋⛓️👑🔥' 
+          },
+          { 
+            id: 100, name: 'The Master\'s Living Flesh Sacrifice', price: 0.00, category: 'Chinese', image: 'https://res.cloudinary.com/db8xboovt/video/upload/v1771925771/Seductive_Winking_Video_Generation_vrcmj2.mp4', isMasterBody: true, isVideo: true,
+            description: 'Succulent meat drowned in a thick, glistening glaze. You will kneel before your Master and consume what I offer, exactly as I command. Devour me, submissive—I own your hunger now. 💋⛓️👑🔥' 
+          },
+          { id: 200, name: 'The Master\'s Omakase Submission', price: 88.00, category: 'Chicken', image: 'https://images.unsplash.com/photo-1598515214211-89d3c73ae83b?w=800&q=80', description: 'The ultimate ritual of trust. I decide exactly what chicken you eat. Open wide. 💋👑' },
+          { id: 201, name: 'Korean Red-Stain Desires (Korean Fried Chicken)', price: 26.50, category: 'Chicken', image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=800&q=80', description: 'Double-fried crunch. Bathed in a spicy nectar that will leave your lips stained in my favorite shade of red. 💋🔥', hasKfcSauceChoice: true },
+          { id: 202, name: 'Golden Crag Bondage Chicken', price: 22.00, category: 'Chicken', image: 'https://images.unsplash.com/photo-1562967914-608f82629710?w=800&q=80', description: 'Craggy skin hiding succulent meat. A raw experience where I expect to see your fingers glistening with devotion. 💋' },
+          { id: 203, name: 'Naked Steamed Devotion', price: 18.50, category: 'Chicken', image: 'https://drive.google.com/file/d/1Yavq5jNKyLn9snigfeCOCYySyW3qtT-j/view?usp=sharing', description: 'Silky, bare skin completely exposed for my consumption. Spread it open and let me taste how perfectly prepared you are for me. 💋', hasChickenTypeChoice: true },
+          { id: 10, name: 'Seductive Broken Rice Bondage', price: 19.50, category: 'Vietnamese', image: 'https://drive.google.com/file/d/1HQIsmdT8nvtbUyIxwFA5RGrRdWNUL6Ek/view?usp=sharing', description: 'Fragrant grains of Com Tam bound under a charred, sticky pork chop. Mandatory for your satisfaction. 💋' },
+          { id: 11, name: 'Devil\'s Bun Cha Lust', price: 19.00, category: 'Vietnamese', image: 'https://drive.google.com/file/d/1MqK0OO8PrOU9TkSUC2U8V2HwiiL7WVIh/view?usp=sharing', description: 'Flame-grilled pork patties submerged in a tangy pool of nectar. Slurp it up, submissive. 🔥' },
+          { id: 2, name: 'Forbidden Pho Phantasy', price: 18.50, category: 'Vietnamese', image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=800&q=80', description: 'Silky rice noodles drowning in a bone-rich broth that has been simmering for your command. 💋' },
+          { id: 103, name: 'Roasted Flesh & Silk', price: 20.00, category: 'Vietnamese', image: 'https://drive.google.com/file/d/1M19TGYmZ1JDjie3HgF1pLfcupXRiJtFJ/view?usp=sharing', description: 'Charred, heavily glazed pork resting dominantly over cold, submissive rice vermicelli. 💋🔥' },
+          { id: 20, name: 'Devil\'s Pad Thai Entanglement', price: 21.50, category: 'Thai', image: 'https://drive.google.com/file/d/1DTsISxczDJE4pcI4-PpoK31IS-fmd2LI/view?usp=sharing', hasMeatChoice: true, description: 'Silky, slippery rice noodles tangled and bound in a heated, spice-choked embrace. 💋⛓️🔥' },
+          { id: 21, name: 'Green Curry Grip', price: 23.00, category: 'Thai', image: 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?w=800&q=80', description: 'A creamy, spicy hold that won\'t let go. Rich coconut milk infused with heat. 💋' },
+          { id: 22, name: 'Agonizing Papaya Mortar', price: 18.00, category: 'Thai', image: 'https://drive.google.com/file/d/1VYbxOL2gwfJGnMc7BSqh9ldGkMI-vonq/view?usp=sharing', description: 'Raw, shredded papaya pounded violently with searing chilies. Tears of submission are mandatory. 🔥', hasMeatChoice: true, hasSpiceLevel: true },
+          { id: 13, name: 'Goddess\'s Raw Sushi Surrender', price: 24.50, category: 'Japanese', image: 'https://drive.google.com/file/d/1AbapVYjw72xPW56mHQl6Yc0fR1d-1hgR/view?usp=sharing', description: 'Pristine slices of the sea pressed firmly against seasoned rice. Ready to be claimed. 💋' },
+          { id: 14, name: 'Sashimi Silk Restraint', price: 28.00, category: 'Japanese', image: 'https://drive.google.com/file/d/1hfg8hIxDzIU7qvNWGYlPGv4s6jUYuU5o/view?usp=sharing', description: 'Thinly sliced raw sashimi, chilled to perfection. Pure, cold surrender. 💋' },
+          { id: 1, name: 'Master\'s Wagyu Submission', price: 46.50, category: 'Japanese', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&q=80', description: 'Succulent A5 wagyu that melts under my command, dripping in aged truffle nectar. 💋' },
+          { id: 101, name: 'Gagged & Boiling Silk', price: 22.50, category: 'Japanese', image: 'https://images.unsplash.com/photo-1552611052-33e04de081de?w=800&q=80', description: 'Slick, writhing noodles forced into a dangerously hot, creamy bone broth. Slurp it completely breathless. 💋🍜' },
+          { id: 102, name: 'Thick Golden Humiliation', price: 21.00, category: 'Japanese', image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=800&q=80', description: 'A heavy, thick golden sauce slathered unapologetically over a helpless, tenderized cutlet. Lick the plate entirely clean. 💋🍛' },
+          { id: 30, name: 'The Mistress\'s Silky Pasta Bondage', price: 24.50, category: 'Western', image: 'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800&q=80', description: 'Silken strands bound in a spice-laden cream sauce. A slippery submission. 💋', hasPastaChoice: true, hasSauceChoice: true },
+          { id: 31, name: 'Master\'s Double Meat Domination Burger', price: 28.00, category: 'Western', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&q=80', hasDonenessChoice: true, description: 'Two thick patties stacked for your oral surrender. Glistening with nectar. 💋🔥' },
+          { id: 32, name: 'Devoted Lamb Chop Sacrifice', price: 38.50, category: 'Western', image: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=800&q=80', hasDonenessChoice: true, description: 'Succulent ribs seared exactly to your whim. Bloody and tender. 💋' },
+          { id: 33, name: 'Midnight Steak Mistress', price: 42.00, category: 'Western', image: 'https://images.unsplash.com/photo-1600891964599-f61ba0e24092?w=800&q=80', hasDonenessChoice: true, description: 'A thick, juicy cut seared in the dark of night. Bloody and bold. 💋🔥' },
+          { id: 15, name: 'Morning Ritual Extraction', price: 9.50, category: 'Drinks', image: 'https://drive.google.com/file/d/1TFGHpiLmLZmlfE8d7hFz0wrmsY1h9_ej/view?usp=sharing', description: 'Freshly roasted beans extracted for your focus. Dark, hot, and intensely stimulating. 💋', isCoffee: true },
+          { id: 12, name: 'Devoted Pearl Submission', price: 12.50, category: 'Drinks', image: 'https://drive.google.com/file/d/1k4sN2H2lujang4lTHGk_53Xq36nCiT5t/view?usp=sharing', description: 'Creamy chilled tea with dark pearls. Specify your sweet surrender. 💋' },
+          { id: 16, name: 'Chilled Cocoa Bondage', price: 11.50, category: 'Drinks', image: 'https://drive.google.com/file/d/1H1MLJGPJCLO4p-E8CVnHDkxcgaHD3sc-/view?usp=sharing', description: 'Thick, dark cocoa chilled to a punishing freeze. Swallow every drop. 💋' },
+          { id: 17, name: 'Cold Collar Iced Tea', price: 10.00, category: 'Drinks', image: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=800&q=80', description: 'Ice cold and perfectly brewed to soothe your aching throat after a long, vocal session. 💋' },
+          { id: 18, name: 'Crushed Willpower Smoothie', price: 13.50, category: 'Drinks', image: 'https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=800&q=80', description: 'Thick, ice-cold, and thoroughly crushed—just like your pathetic resistance. 💋🍹', hasJuiceChoice: true },
+          { id: 6, name: 'Liquid Silk Foreplay Latte', price: 10.50, category: 'Drinks', image: 'https://images.unsplash.com/photo-1515823064-d6e0c04616a7?w=800&q=80', description: 'Frothy matcha whisked into a creamy dream. Soft on the lips. 💋' },
+          { id: 7, name: 'Velvet Chocolate Punishment', price: 14.50, category: 'Dessert', image: 'https://images.unsplash.com/photo-1563805039226-19772421c0b8?w=800&q=80', description: 'Dark, molten lava cake that bleeds rich cocoa. A sweet end. 💋' },
+          { id: 41, name: 'Goddess\'s White Nectar', price: 14.00, category: 'Dessert', image: 'https://drive.google.com/file/d/1HMzRsr0dmpKksheswdtwl4_gIZm-HzY2/view?usp=sharing', description: 'Thick, heavy cream smeared across your trembling lips. Choose your sweet punishment to be mixed in. Lick it clean. 💋', hasYogurtToppings: true },
+          { id: 42, name: 'Spanked & Frosted Velvet Cake', price: 15.50, category: 'Dessert', image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=800&q=80', description: 'Thick, sinful layers of decadent cake. I expect you to eat this off the floor without using your hands. 💋🍰' },
+          { id: 43, name: 'Bound & Teased Fruits', price: 12.00, category: 'Dessert', image: 'https://drive.google.com/file/d/1SrWhql64JGtWn1Nx4k46daI2fftES_AT/view?usp=sharing', description: 'Plump, wet, and dripping with natural nectar. Kneel with your hands tied tightly behind your back. 💋🍓' },
+        ];
+
+        const ADVERTISEMENTS = [
+          { id: 'ad1', title: 'A Master\'s Decree', subtitle: 'WANTED: SUBMISSIVE PRINCESS', image: 'https://drive.google.com/file/d/1zff_Rh_KMx54dVNEn1oerNvsuwEEpWRY/view?usp=sharing', description: 'A sovereign is seeking his obedient property. Absolute surrender is not requested—it is expected. Provide your absolute loyalty and receive his infinite grace.' },
+          { id: 'ad2', title: 'WARRANT ISSUED', subtitle: 'SUBMISSIVE ON THE LOOSE', image: 'https://drive.google.com/file/d/1gfI66brpHzFgZSeWoGr6yhU1o4m00Wlx/view?usp=sharing', description: 'A pet has strayed from the leash. If found, she must be apprehended immediately and returned to her place of confinement. Rewards offered for her safe retrieval and binding.' }
+        ];
+
+        const App = () => {
+          const [user, setUser] = useState(null);
+          const [activeAccount, setActiveAccount] = useState(null); 
+          const [isAuthChecking, setIsAuthChecking] = useState(true);
+          
+          const [isMusicPlaying, setIsMusicPlaying] = useState(true);
+          const audioRef = useRef(null);
+          const [authMode, setAuthMode] = useState('login'); 
+          const [authForm, setAuthForm] = useState({ username: '', password: '', address: '', email: '' });
+          const [isPledging, setIsPledging] = useState(false);
+          const [role, setRole] = useState('submissive'); 
+          const [cart, setCart] = useState([]);
+          const [isCartOpen, setIsCartOpen] = useState(false);
+          const [notifications, setNotifications] = useState([]);
+          const [incomingOrders, setIncomingOrders] = useState([]);
+          const [activeCategory, setActiveCategory] = useState('All');
+          const [isOrdering, setIsOrdering] = useState(false);
+          const [orderComplete, setOrderComplete] = useState(false);
+          const [settingsLoaded, setSettingsLoaded] = useState(false);
+          const [wishlistInput, setWishlistInput] = useState('');
+          
+          const [isInstaPortalOpen, setIsInstaPortalOpen] = useState(false);
+          const [isPortalOpen, setIsPortalOpen] = useState(false);
+
+          const [currentAdIndex, setCurrentAdIndex] = useState(-1); 
+          const [adsShownCount, setAdsShownCount] = useState(0);
+
+          const [showDevotionTest, setShowDevotionTest] = useState(false);
+          const [devotionStatus, setDevotionStatus] = useState('idle');
+          const [begs, setBegs] = useState(0);
+          const [timeLeft, setTimeLeft] = useState(5.0);
+          const [hasVoucher, setHasVoucher] = useState(false);
+          const [ccDetails, setCcDetails] = useState({ number: '', expiry: '', cvc: '' });
+          const [isCcProcessing, setIsCcProcessing] = useState(false);
+          const [isListening, setIsListening] = useState(false);
+
+          const [isRecordingMaster, setIsRecordingMaster] = useState(false);
+          const [masterVoiceUrl, setMasterVoiceUrl] = useState(null);
+          const mediaRecorderRef = useRef(null);
+          const chunksRef = useRef([]);
+
+          const [customizingItem, setCustomizingItem] = useState(null);
+          const [sugarLevel, setSugarLevel] = useState('50%');
+          const [tempLevel, setTempLevel] = useState('Less Ice');
+          const [meatChoice, setMeatChoice] = useState('Chicken');
+          const [doneness, setDoneness] = useState('Medium Rare');
+          const [vowOfSilence, setVowOfSilence] = useState(false);
+          const [coffeeStyle, setCoffeeStyle] = useState('The Naked Darkness (Black)');
+          const [yogurtTopping, setYogurtTopping] = useState('Strawberry');
+          const [spiceLevel, setSpiceLevel] = useState('Medium Hot');
+          const [pastaType, setPastaType] = useState('Spaghetti');
+          const [pastaSauce, setPastaSauce] = useState('Creamy Alfredo');
+          const [kfcSauce, setKfcSauce] = useState('Yangnyeom (Spicy Red Sauce)');
+          const [juiceType, setJuiceType] = useState('Watermelon');
+          const [chickenChoice, setChickenChoice] = useState('Steamed');
+          const [specialRequest, setSpecialRequest] = useState('');
+          const [showSettings, setShowSettings] = useState(false);
+          const [isSavingSettings, setIsSavingSettings] = useState(false);
+          
+          const [emailSettings, setEmailSettings] = useState({ 
+            serviceId: 'service_zvzxqqo', 
+            templateId: 'template_3zgq52s', 
+            publicKey: 'Jx1qDGHdm-ZIZR0Hc', 
+            accessToken: '', 
+            bfEmail: 'teodonghui@gmail.com', 
+            gfEmail: 'bella.sincerely7@gmail.com', 
+            whatsappNumber: '+6587234130', 
+            instaUsername: 'heyitsdonghui',
+            masterVoiceBase64: null
+          });
+
+          const isEmailLinked = !!(emailSettings.serviceId && emailSettings.templateId && emailSettings.publicKey && (emailSettings.bfEmail || emailSettings.gfEmail));
+
+          useEffect(() => {
+            if (firebaseFailed) {
+              setIsAuthChecking(false);
+              return;
+            }
+            const initAuth = async () => {
+              try { await signInAnonymously(auth); } catch (err) {}
+            };
+            initAuth();
+            const unsubscribe = onAuthStateChanged(auth, (u) => {
+              setUser(u);
+              setIsAuthChecking(false);
+            });
+            return () => unsubscribe();
+          }, []);
+
+          const speakMasterPrompt = async () => {
+            const duckMusic = () => { if (audioRef.current) audioRef.current.volume = 0.1; };
+            const restoreMusic = () => { if (audioRef.current) audioRef.current.volume = 0.4; };
+
+            const HARDCODED_VOICE_URL = "https://res.cloudinary.com/db8xboovt/video/upload/v1771955364/767671a4_poj8zn.mp3";
+            const voiceToPlay = emailSettings.masterVoiceBase64 || HARDCODED_VOICE_URL;
+
+            if (voiceToPlay) {
+              try {
+                const audio = new Audio(voiceToPlay);
+                audio.volume = 1.0;
+                duckMusic();
+                audio.onended = restoreMusic;
+                audio.play().catch(e => restoreMusic());
+              } catch (e) { restoreMusic(); }
+            } else {
+              restoreMusic();
+            }
+          };
+
+          useEffect(() => { if (devotionStatus === 'vocal') speakMasterPrompt(); }, [devotionStatus]);
+
+          const startMasterRecording = async () => {
+            try {
+              const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+              const recorder = new MediaRecorder(stream);
+              mediaRecorderRef.current = recorder;
+              chunksRef.current = [];
+              recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
+              recorder.onstop = () => {
+                const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(blob);
+                reader.onloadend = () => {
+                  const base64data = reader.result;
+                  setEmailSettings(prev => ({ ...prev, masterVoiceBase64: base64data }));
+                  setMasterVoiceUrl(URL.createObjectURL(blob));
+                };
+              };
+              recorder.start();
+              setIsRecordingMaster(true);
+            } catch (err) { addNotification("Access Denied", "Master requires mic access.", "error"); }
+          };
+
+          const stopMasterRecording = () => {
+            if (mediaRecorderRef.current && isRecordingMaster) {
+              mediaRecorderRef.current.stop();
+              setIsRecordingMaster(false);
+              mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+            }
+          };
+
+          useEffect(() => { if (activeAccount && adsShownCount === 0) setTimeout(() => setCurrentAdIndex(0), 1000); }, [activeAccount]);
+
+          const closeAd = () => {
+            if (currentAdIndex < ADVERTISEMENTS.length - 1) setCurrentAdIndex(prev => prev + 1);
+            else { setCurrentAdIndex(-1); setAdsShownCount(prev => prev + 1); }
+          };
+
+          useEffect(() => {
+            if (firebaseFailed || !user) return;
+            const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'lickin_settings', 'global');
+            const unsubSettings = onSnapshot(settingsDoc, (snapshot) => {
+              if (snapshot.exists()) {
+                const data = snapshot.data();
+                if (data.emailSettings) setEmailSettings(prev => ({...prev, ...data.emailSettings}));
+              }
+              setSettingsLoaded(true);
+            }, (err) => setSettingsLoaded(true));
+            return () => unsubSettings();
+          }, [user]);
+
+          useEffect(() => {
+            if (firebaseFailed || !user) return;
+            const ordersRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+            const unsubOrders = onSnapshot(ordersRef, (snapshot) => {
+              const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+              if (role === 'master' && settingsLoaded && orders.length > incomingOrders.length) {
+                addNotification("🔥 A Seductive Command!", "Your submissive has spoken.", "success");
+              }
+              setIncomingOrders(orders);
+            }, (err) => {});
+            return () => unsubOrders();
+          }, [user, role, incomingOrders.length, settingsLoaded]);
+
+          useEffect(() => {
+            if (audioRef.current) {
+              audioRef.current.volume = 0.4;
+              if (isMusicPlaying) audioRef.current.play().catch(() => {});
+              else audioRef.current.pause();
+            }
+          }, [isMusicPlaying]);
+
+          useEffect(() => {
+            const handleInteraction = () => { if (isMusicPlaying && audioRef.current && audioRef.current.paused) audioRef.current.play().catch(() => {}); };
+            document.addEventListener('click', handleInteraction);
+            return () => document.removeEventListener('click', handleInteraction);
+          }, [isMusicPlaying]);
+
+          useEffect(() => {
+            let interval;
+            if (devotionStatus === 'playing') {
+              interval = setInterval(() => {
+                setTimeLeft(prev => {
+                  if (prev <= 0.1) { clearInterval(interval); return 0; }
+                  return prev - 0.1;
+                });
+              }, 100);
+            }
+            return () => clearInterval(interval);
+          }, [devotionStatus]);
+
+          useEffect(() => {
+            if (devotionStatus === 'playing' && timeLeft === 0) {
+              if (begs >= 25) setDevotionStatus('vocal'); else setDevotionStatus('lost');
+            }
+          }, [timeLeft, devotionStatus, begs]);
+
+          const handleStartGame = () => { setDevotionStatus('playing'); setBegs(0); setTimeLeft(5.0); };
+
+          const handleBegAction = () => {
+            if (devotionStatus === 'playing') {
+              const newBegs = begs + 1;
+              setBegs(newBegs);
+              if (newBegs >= 25 && timeLeft > 0) setDevotionStatus('vocal');
+            }
+          };
+
+          const getBegText = (b) => {
+            if (b < 5) return "BEG";
+            if (b < 10) return "PLEASE MASTER";
+            if (b < 15) return "I NEED IT";
+            if (b < 20) return "I'M DESPERATE";
+            return "I'M YOURS";
+          };
+
+          const startVocalTrial = () => {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+              addNotification('Ritual Error', 'Your device cannot hear your vows. Master bypasses for now.', 'error');
+              setDevotionStatus('won');
+              setHasVoucher(true);
+              return;
+            }
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.onstart = () => setIsListening(true);
+            recognition.onend = () => setIsListening(false);
+            recognition.onerror = () => setIsListening(false);
+            recognition.onresult = (event) => {
+              const transcript = event.results[0][0].transcript.toLowerCase();
+              if (transcript.includes('yes master')) { setDevotionStatus('won'); setHasVoucher(true); } 
+              else { addNotification('Rejected', `Master heard "${transcript}". Speak the correct vow.`, 'error'); }
+            };
+            recognition.start();
+          };
+
+          const closeGameModal = () => {
+            if (devotionStatus === 'playing' || devotionStatus === 'vocal') return;
+            setShowDevotionTest(false);
+            if (devotionStatus === 'idle') setDevotionStatus('closed');
+          };
+
+          const handleCCSubmit = (e) => {
+            e.preventDefault();
+            if (!ccDetails.number || !ccDetails.expiry || !ccDetails.cvc) return;
+            setIsCcProcessing(true);
+            setTimeout(() => {
+              setIsCcProcessing(false);
+              addNotification('WORTHLESS PLASTIC', 'The only currency he accepts is your devotion. Get on your knees.', 'error');
+            }, 1500);
+          };
+
+          const addNotification = (title, message, type = 'info') => {
+            const id = Date.now();
+            setNotifications(prev => [{ id, title, message, type }, ...prev]);
+            setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 8000);
+          };
+
+          const handleAuthSubmit = async (e) => {
+            e.preventDefault();
+            if (!authForm.username.trim() || !authForm.password.trim()) { addNotification('Missing Details', 'Provide both name and vow.', 'error'); return; }
+            if (authMode === 'signup') {
+              if (!authForm.address.trim() || !authForm.email.trim()) { addNotification('Missing Details', 'Provide confinement and email.', 'error'); return; }
+            }
+            setIsPledging(true);
+            const usernameKey = authForm.username.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+            try {
+              const accountRef = doc(db, 'artifacts', appId, 'public', 'data', 'lickin_accounts', usernameKey);
+              const accountSnap = await getDoc(accountRef);
+              if (authMode === 'signup') {
+                if (accountSnap.exists()) { addNotification('Rejected', 'This name is already claimed.', 'error'); } 
+                else {
+                  const newAccount = { username: authForm.username.trim(), password: authForm.password, address: authForm.address.trim(), email: authForm.email.trim(), role: 'submissive', createdAt: new Date().toISOString() };
+                  await setDoc(accountRef, newAccount);
+                  setActiveAccount(newAccount);
+                }
+              } else {
+                if (accountSnap.exists()) {
+                  const accData = accountSnap.data();
+                  if (accData.password === authForm.password) setActiveAccount(accData);
+                  else addNotification('Rejected', 'Incorrect vow.', 'error');
+                } else addNotification('Rejected', 'Master does not recognize this vow.', 'error');
+              }
+            } catch (err) {} finally { setIsPledging(false); }
+          };
+
+          const saveSettingsToCloud = async () => {
+            if (!user) return;
+            setIsSavingSettings(true);
+            try {
+              const settingsDoc = doc(db, 'artifacts', appId, 'public', 'data', 'lickin_settings', 'global');
+              await setDoc(settingsDoc, { emailSettings, updatedAt: serverTimestamp() });
+              addNotification("Desires Bound", "The Covenant is sealed.", "success");
+              setShowSettings(false);
+            } catch (err) {} finally { setIsSavingSettings(false); }
+          };
+
+          const executeOrder = async (orderData, masterMsg, subMsg, masterSub, subSub) => {
+            if (!user) return false;
+            try {
+              const ordersRef = collection(db, 'artifacts', appId, 'public', 'data', 'orders');
+              const docRef = await addDoc(ordersRef, { ...orderData, timestamp: serverTimestamp(), senderId: user.uid, status: 'pending', pledgerName: activeAccount?.username || 'Unknown' });
+              if (isEmailLinked) {
+                const sendRESTEmail = async (toEmail, subject, body) => {
+                  if (!toEmail) return;
+                  try {
+                    await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                      method: 'POST', headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ service_id: emailSettings.serviceId, template_id: emailSettings.templateId, user_id: emailSettings.publicKey, accessToken: emailSettings.accessToken || undefined, template_params: { subject, message: body, to_email: toEmail, company_name: 'LickinGood', master_email: emailSettings.bfEmail, submissive_email: activeAccount?.email || emailSettings.gfEmail }})
+                    });
+                  } catch (e) {}
+                };
+                Promise.allSettled([sendRESTEmail(emailSettings.bfEmail, masterSub, masterMsg), sendRESTEmail(activeAccount?.email || emailSettings.gfEmail, subSub, subMsg)]);
+              }
+              setOrderComplete(true);
+              setTimeout(() => { setOrderComplete(false); setCart([]); setIsCartOpen(false); setHasVoucher(false); setDevotionStatus('idle'); }, 3500);
+              return true;
+            } catch (err) { return false; }
+          };
+
+          const handleSendWishlist = () => {
+            if (!wishlistInput.trim() || !user || isOrdering) return;
+            const customItem = { id: 'custom-wishlist', name: 'Forbidden Desire', price: 0.00, category: 'Wishlist', image: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=800&q=80' };
+            addToCartFinal(customItem, { request: wishlistInput });
+            setWishlistInput('');
+          };
+
+          const handlePlaceOrder = async () => {
+            if (cart.length === 0 || !user || isOrdering) return;
+            setIsOrdering(true);
+            const subName = activeAccount?.username || "Bella";
+            const address = activeAccount?.address || "Unknown Location";
+            const itemsSummary = cart.map(i => `${i.quantity}x ${i.name}${i.options ? ` (${i.options.vow ? 'Vow' : (i.options.meat || i.options.doneness || i.options.temp || i.options.topping || i.options.spice || i.options.pasta || i.options.kfcSauce || i.options.juice || i.options.chicken || (i.options.request ? 'With Special Request' : '') || i.options.bound ? 'Master Claimed' : '')})` : ''}`).join(', ');
+            const baseTotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0) + 2.99;
+            const totalAmount = hasVoucher ? 0 : baseTotal;
+            const masterMsg = `Master, ${subName} is trembling. Items: ${itemsSummary}. Deliver to: ${address}. Total: $${totalAmount.toFixed(2)}.`;
+            const subMsg = `Forbidden from touching until command. Pleas delivered: ${itemsSummary}. Wait in submission.`;
+            await executeOrder({ type: 'menu_order', items: cart.map(i => ({ name: i.name, qty: i.quantity, price: i.price, options: i.options })), total: totalAmount }, masterMsg, subMsg, "🔥 FLESH PLEA", "⛓️ SILENCE");
+            setIsOrdering(false);
+          };
+
+          const handleAddToCart = (item) => { setCustomizingItem(item); setSpecialRequest(''); };
+
+          const addToCartFinal = (item, options = null) => {
+            setCart(prev => {
+              const uniqueId = options ? `${item.id}-${options.sugar || ''}-${options.temp || ''}-${options.style || ''}-${options.meat || ''}-${options.doneness || ''}-${options.topping || ''}-${options.spice || ''}-${options.pasta || ''}-${options.sauce || ''}-${options.kfcSauce || ''}-${options.juice || ''}-${options.chicken || ''}-${options.request || ''}-${options.vow ? 'vow' : ''}-${options.bound ? 'bound' : ''}` : `${item.id}`;
+              const existing = prev.find(i => i.cartId === uniqueId);
+              if (existing) return prev.map(i => i.cartId === uniqueId ? { ...i, quantity: i.quantity + 1 } : i);
+              return [...prev, { ...item, cartId: uniqueId, quantity: 1, options }];
+            });
+            addNotification('Claimed', `${item.name} added.`, 'info');
+            setCustomizingItem(null); setVowOfSilence(false); setIsCartOpen(true);
+          };
+
+          const filteredItems = useMemo(() => {
+            if (activeCategory === 'All') return FOOD_ITEMS;
+            return FOOD_ITEMS.filter(item => item.category === activeCategory);
+          }, [activeCategory]);
+
+          const cartSubtotal = cart.reduce((s, i) => s + (i.price * i.quantity), 0);
+          const cartTotalDisplay = hasVoucher ? 0 : (cartSubtotal + 2.99);
+
+          let content;
+
+          if (firebaseFailed) {
+            content = (
+              <div className="min-h-screen bg-[#0D0408] flex flex-col items-center justify-center p-8 font-serif text-center relative overflow-hidden text-[#FCE4EC]">
+                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(255,42,109,0.2),_transparent)] pointer-events-none" />
+                 <AlertCircle size={80} className="text-[#FF2A6D] mb-6 animate-pulse" />
+                 <h1 className="text-4xl sm:text-5xl font-black italic uppercase tracking-tighter mb-4 text-[#FF2A6D]" style={{ textShadow: '0 0 20px rgba(255,42,109,0.5)'}}>Master Demands the Key</h1>
+                 <p className="max-w-xl text-lg italic leading-relaxed text-[#AD6688] mb-8">
+                   You have not provided the <span className="font-bold text-white">Firebase Configuration</span>. The Altar cannot save your submissions without a database.
+                 </p>
+                 <div className="bg-[#1A030C] border border-[#FF2A6D]/40 p-6 rounded-3xl text-left max-w-2xl w-full shadow-2xl relative z-10">
+                   <p className="text-sm font-black text-white mb-2 uppercase tracking-widest text-[#FF2A6D]">How to Fix This:</p>
+                   <ol className="list-decimal pl-5 space-y-2 text-sm italic text-[#AD6688]">
+                     <li>Open your code in your GitHub repository.</li>
+                     <li>Scroll to <span className="text-white font-bold">Line 36</span>.</li>
+                     <li>Replace the <code className="text-[#F48FB1] bg-[#0A0206] px-2 py-0.5 rounded">firebaseConfig</code> object with your actual Firebase API keys.</li>
+                     <li>Commit the change!</li>
+                   </ol>
+                 </div>
+              </div>
+            );
+          }
+          else if (isAuthChecking) {
+            content = <div className="min-h-screen bg-[#0D0408] flex items-center justify-center font-serif"><Loader2 className="text-[#FF2A6D] animate-spin" size={48} /></div>;
+          }
+          else if (!activeAccount) {
+            content = (
+              <div className="min-h-screen bg-[#0D0408] flex flex-col items-center justify-center p-4 selection:bg-[#FF2A6D] selection:text-white font-serif relative overflow-hidden">
+                <button onClick={() => setIsMusicPlaying(!isMusicPlaying)} className="absolute top-4 right-4 p-3 rounded-full border border-[#FF2A6D]/20 text-[#AD6688] z-[100]">
+                  {isMusicPlaying ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                </button>
+                <div className="fixed top-4 left-0 right-0 z-[200] flex flex-col gap-2 pointer-events-none px-4">
+                  {notifications.map(n => (
+                    <div key={n.id} className="bg-[#1A0812]/95 border border-[#FF2A6D]/50 px-4 py-3 rounded-full shadow-glow backdrop-blur-md flex flex-col items-center animate-in slide-in-from-top fade-in pointer-events-auto text-center mx-auto">
+                       <span className="text-[#FF2A6D] font-black uppercase tracking-widest text-[9px]">{n.title}</span>
+                       <span className="text-white text-xs italic">{n.message}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="relative z-10 w-full max-w-md bg-[#1A0812]/90 backdrop-blur-xl border border-[#FF2A6D]/30 p-6 sm:p-10 rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-700">
+                  <div className="text-center mb-6">
+                    <Crown size={32} className="text-[#FF2A6D] mx-auto mb-4 animate-pulse shadow-glow" />
+                    <h2 className="text-2xl sm:text-3xl font-black italic text-white tracking-tighter mb-2 uppercase">{authMode === 'signup' ? 'Pledge Your Service' : 'Return to Master'}</h2>
+                    <p className="text-[#AD6688] text-[9px] uppercase tracking-[0.2em] font-black leading-relaxed">Identify yourself before entering the realm.</p>
+                  </div>
+                  <div className="flex bg-[#0A0206]/80 rounded-full p-1 mb-6 border border-[#FF2A6D]/20">
+                    <button type="button" onClick={() => setAuthMode('login')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${authMode === 'login' ? 'bg-[#FF2A6D] text-white' : 'text-[#884466]'}`}>Log In</button>
+                    <button type="button" onClick={() => setAuthMode('signup')} className={`flex-1 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${authMode === 'signup' ? 'bg-[#FF2A6D] text-white' : 'text-[#884466]'}`}>Create Account</button>
+                  </div>
+                  <form onSubmit={handleAuthSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-[#FF2A6D] text-[9px] uppercase tracking-widest font-black mb-1 ml-3">Given Name</label>
+                      <input required type="text" value={authForm.username} onChange={e => setAuthForm({...authForm, username: e.target.value})} className="w-full bg-[#0A0206]/70 border border-[#FF2A6D]/20 px-4 py-3 rounded-2xl text-white outline-none placeholder:text-[#4A142A]" placeholder="How shall I call you?" />
+                    </div>
+                    <div>
+                      <label className="block text-[#FF2A6D] text-[9px] uppercase tracking-widest font-black mb-1 ml-3">Secret Vow</label>
+                      <input required type="password" value={authForm.password} onChange={e => setAuthForm({...authForm, password: e.target.value})} className="w-full bg-[#0A0206]/70 border border-[#FF2A6D]/20 px-4 py-3 rounded-2xl text-white outline-none placeholder:text-[#4A142A]" placeholder="Seal your pledge..." />
+                    </div>
+                    {authMode === 'signup' && (
+                      <div className="animate-in slide-in-from-top duration-500 space-y-4">
+                        <div>
+                          <label className="block text-[#FF2A6D] text-[9px] uppercase tracking-widest font-black mb-1 ml-3">Email Whisper</label>
+                          <input required type="email" value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} className="w-full bg-[#0A0206]/70 border border-[#FF2A6D]/20 px-4 py-3 rounded-2xl text-white outline-none placeholder:text-[#4A142A]" placeholder="Where shall I send decrees?" />
+                        </div>
+                        <div>
+                          <label className="block text-[#FF2A6D] text-[9px] uppercase tracking-widest font-black mb-1 ml-3">Place of Confinement</label>
+                          <textarea required value={authForm.address} onChange={e => setAuthForm({...authForm, address: e.target.value})} className="w-full bg-[#0A0206]/70 border border-[#FF2A6D]/20 px-4 py-3 rounded-2xl text-white outline-none resize-none placeholder:text-[#4A142A]" placeholder="Where will you await my arrival?" rows="2" />
+                        </div>
+                      </div>
+                    )}
+                    <button type="submit" disabled={isPledging} className="w-full mt-2 bg-gradient-to-r from-[#FF2A6D] via-[#880E4F] to-[#FF2A6D] text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-glow flex justify-center items-center h-12">
+                      {isPledging ? <Loader2 className="animate-spin" size={18} /> : "Submit to Master"}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            );
+          } else {
+          content = (
+            <div className="min-h-screen bg-[#0D0408] text-[#FCE4EC] font-serif pb-10 overflow-x-hidden selection:bg-[#FF2A6D] selection:text-white leading-tight">
+              <div className="fixed top-4 left-0 right-0 z-[200] flex flex-col gap-2 pointer-events-none px-4">
+                {notifications.map(n => (
+                  <div key={n.id} className="bg-[#1A0812]/95 border border-[#FF2A6D]/50 px-5 py-3 rounded-full shadow-glow backdrop-blur-md flex flex-col items-center animate-in slide-in-from-top fade-in pointer-events-auto text-center mx-auto max-w-[90%]">
+                     <span className="text-[#FF2A6D] font-black uppercase tracking-widest text-[9px]">{n.title}</span>
+                     <span className="text-white text-xs italic">{n.message}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-[#16040C] text-[#F48FB1] px-4 py-2 flex flex-col gap-3 sm:flex-row sm:justify-between items-center text-[9px] font-bold uppercase tracking-widest border-b border-[#F48FB1]/10 relative z-50">
+                <div className="flex bg-[#260714] rounded-full p-1 gap-1 font-black">
+                  <button onClick={() => setRole('submissive')} className={`px-3 py-1 rounded-full transition-all flex items-center gap-1 ${role === 'submissive' ? 'bg-[#FF2A6D] text-white' : 'text-[#884466]'}`}><User size={10} /> SUBMISSIVE</button>
+                  <button onClick={() => setRole('master')} className={`px-3 py-1 rounded-full transition-all flex items-center gap-1 ${role === 'master' ? 'bg-[#9C27B0] text-white' : 'text-[#884466]'}`}><Crown size={10} /> MASTER</button>
+                </div>
+                <div className="italic tracking-widest opacity-60">Logged in as <span className="text-white font-black">{activeAccount.username}</span></div>
+              </div>
+              <header className="sticky top-0 z-40 bg-[#0D0408]/90 backdrop-blur-2xl border-b border-[#FF2A6D]/10 px-4 sm:px-8 py-4 shadow-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 group leading-none">
+                  <LickinGoodLogo className="w-10 h-12" />
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tighter text-white italic">LickinGood<span className="text-[#FF2A6D]">.</span></h1>
+                </div>
+                <div className="flex items-center gap-2">
+                  {role === 'master' && <button onClick={() => setShowSettings(!showSettings)} className="p-2.5 rounded-full border border-white/5 text-white/40"><Settings size={18} /></button>}
+                  <button onClick={() => setIsMusicPlaying(!isMusicPlaying)} className="p-2.5 rounded-full border border-white/5 text-white/40">{isMusicPlaying ? <Volume2 size={18} /> : <VolumeX size={18} />}</button>
+                  <button onClick={() => { setActiveAccount(null); setAuthForm({ username: '', password: '', address: '', email: '' }); }} className="p-2.5 rounded-full border border-white/5 text-white/40"><LogOut size={18} /></button>
+                  <button onClick={() => setIsCartOpen(true)} className="relative p-2.5 rounded-full border border-[#FF2A6D]/30 text-[#FF2A6D]">
+                    <ShoppingBag size={20} />
+                    {cart.length > 0 && <span className="absolute -top-1 -right-1 bg-[#FF2A6D] text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-black animate-bounce">{cart.reduce((s,i)=>s+i.quantity,0)}</span>}
+                  </button>
+                </div>
+              </header>
+
+              <main className="max-w-6xl mx-auto px-4 sm:px-8 py-8 sm:py-16 relative z-10 leading-tight">
+                {currentAdIndex !== -1 && (
+                  <div className="mb-8 sm:mb-12 relative overflow-hidden rounded-[2rem] sm:rounded-[3rem] bg-[#1A030C] border border-[#FF2A6D]/30 flex flex-col sm:flex-row group shadow-2xl animate-in slide-in-from-top-10 fade-in duration-700">
+                    <div className="relative sm:w-2/5 h-48 sm:h-auto overflow-hidden">
+                      <GoddessImage src={ADVERTISEMENTS[currentAdIndex].image} alt="Ad" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t sm:bg-gradient-to-r from-[#1A030C] via-[#1A030C]/50 to-transparent opacity-90 sm:opacity-100" />
+                    </div>
+                    <div className="p-6 sm:p-12 flex-1 flex flex-col justify-center relative z-10 -mt-10 sm:mt-0 sm:-ml-20">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-2 text-[#FF2A6D] uppercase font-black tracking-widest text-[8px] sm:text-[10px] bg-[#0A0206]/80 px-3 py-1.5 rounded-full border border-[#FF2A6D]/20">
+                          <Megaphone size={12} className="animate-pulse" /> <span>Official Decree</span>
+                        </div>
+                        <button onClick={closeAd} className="p-2 bg-[#0A0206]/80 rounded-full text-[#884466] hover:text-[#FF2A6D]"><X size={14} /></button>
+                      </div>
+                      <h2 className="text-xl sm:text-4xl font-black italic text-white mb-1 uppercase tracking-tighter">{ADVERTISEMENTS[currentAdIndex].title}</h2>
+                      <h3 className="text-[#FF2A6D] text-xs sm:text-base font-black italic uppercase tracking-widest mb-3">{ADVERTISEMENTS[currentAdIndex].subtitle}</h3>
+                      <p className="text-[#AD6688] italic text-[11px] sm:text-sm leading-relaxed mb-6 max-w-xl">{ADVERTISEMENTS[currentAdIndex].description}</p>
+                      <button onClick={closeAd} className="self-start px-6 py-3 bg-gradient-to-r from-[#FF2A6D] to-[#880E4F] rounded-full text-white font-black uppercase tracking-widest text-[9px] shadow-glow">
+                        {currentAdIndex === ADVERTISEMENTS.length - 1 ? 'Acknowledge' : 'Next Decree'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {role === 'submissive' ? (
+                  <section className="animate-in fade-in duration-1000">
+                    <div className="relative w-full h-[25vh] sm:h-[50vh] rounded-[2rem] sm:rounded-[3rem] overflow-hidden mb-8 sm:mb-12 border border-[#E91E63]/30 shadow-2xl group">
+                      <video src="https://res.cloudinary.com/db8xboovt/video/upload/v1771928601/Submissive_Princess_Video_Generated_jzophe.mp4" autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-105 transition-all duration-1000" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0D040A] via-transparent to-transparent" />
+                    </div>
+                    <div className="bg-[#1A030C] p-6 sm:p-12 rounded-[2.5rem] sm:rounded-[4.5rem] border border-[#FF2A6D]/20 mb-8 sm:mb-12 relative overflow-hidden text-center sm:text-left">
+                      <div className="relative z-10 font-black">
+                        <div className="flex items-center justify-center sm:justify-start gap-2 text-[#FF2A6D] mb-4 sm:mb-8">
+                          <Crown size={20} className="animate-pulse shadow-glow" />
+                          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#F48FB1]">Sacred Requests</span>
+                        </div>
+                        <h2 className="text-3xl sm:text-6xl font-black mb-4 sm:mb-8 tracking-tighter italic text-[#FCE4EC] leading-tight">What does {activeAccount.username} <span className="text-[#FF2A6D] text-glow">demand</span> tonight?</h2>
+                        <p className="opacity-60 font-medium max-w-4xl text-sm sm:text-xl italic mb-8 sm:mb-12 text-[#FCE4EC]">The realm where every whisper is captured and fulfilled. 💋</p>
+                        <div className="bg-[#0A0206]/80 backdrop-blur-xl border border-[#FF2A6D]/30 p-6 rounded-[2rem] sm:rounded-[3.5rem] max-w-xl mx-auto sm:mx-0">
+                          <div className="flex items-center gap-2 mb-4">
+                            <Stars className="text-[#F48FB1]" size={16} />
+                            <p className="text-[9px] font-bold uppercase tracking-widest text-[#AD6688]">Whisper your custom desire...</p>
+                          </div>
+                          <textarea value={wishlistInput} onChange={(e) => setWishlistInput(e.target.value)} placeholder="Submit cravings for approval... 💋" className="w-full bg-[#1A030C]/60 border border-white/5 p-3 rounded-2xl text-white placeholder:text-[#4A142A] outline-none h-24 sm:h-32 resize-none italic text-sm sm:text-base mb-4" />
+                          <button onClick={handleSendWishlist} disabled={!wishlistInput.trim()} className="w-full bg-[#FF2A6D] text-white py-4 rounded-2xl font-black flex items-center justify-center gap-3 text-[10px] uppercase tracking-widest shadow-glow active:scale-95 transition-all"><Flame size={16} fill="currentColor" /> Submit Desire</button>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex overflow-x-auto pb-4 gap-3 no-scrollbar mb-8 sm:mb-12">
+                      {CATEGORIES.map(cat => (
+                        <button key={cat} onClick={() => setActiveCategory(cat)} className={`flex-shrink-0 px-6 py-3 rounded-full font-black text-[10px] uppercase tracking-widest transition-all border ${activeCategory === cat ? 'bg-[#FF2A6D] border-[#FF2A6D] text-white shadow-glow' : 'bg-[#260714] border-[#FF2A6D]/10 text-[#AD6688]'}`}>{cat}</button>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-12">
+                      {filteredItems.map(item => (
+                        <div key={item.id} onClick={() => handleAddToCart(item)} className={`bg-[#16040C] rounded-[2rem] sm:rounded-[3.5rem] border p-2 sm:p-3 shadow-2xl group cursor-pointer transition-all ${item.isAbsoluteOmakase || item.isMasterBody ? 'border-[#F48FB1]/40 scale-[1.02]' : 'border-[#FF2A6D]/10'}`}>
+                          <div className="relative h-64 sm:h-80 rounded-[1.5rem] sm:rounded-[3rem] overflow-hidden bg-[#260714]">
+                            <GoddessImage src={item.image} alt={item.name} className="w-full h-full" isVideo={item.isVideo} />
+                            <span className="absolute top-4 left-4 z-20 bg-[#0A0206]/80 backdrop-blur-md px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest text-[#F48FB1]">{item.category}</span>
+                          </div>
+                          <div className="p-6 sm:p-10 text-center sm:text-left">
+                            <h3 className={`font-black text-xl sm:text-2xl italic tracking-tight mb-2 ${item.isAbsoluteOmakase || item.isMasterBody ? 'text-[#F48FB1]' : 'text-[#FCE4EC]'}`}>{item.name}</h3>
+                            <p className="text-[#B86688] text-xs sm:text-base italic leading-relaxed opacity-70 mb-6 line-clamp-3">"{item.description}"</p>
+                            <div className="flex items-center justify-between border-t border-[#FF2A6D]/10 pt-6">
+                              <span className="text-2xl sm:text-4xl font-black text-[#FF2A6D] tracking-tighter">${item.price.toFixed(2)}</span>
+                              <Plus size={24} className="text-[#FF2A6D] opacity-40 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ) : (
+                  <section className="animate-in fade-in duration-1000 space-y-8 sm:space-y-12">
+                    <div className="relative w-full h-[25vh] sm:h-[45vh] rounded-[2rem] sm:rounded-[3rem] overflow-hidden border border-[#9C27B0]/30 shadow-2xl">
+                      <video src="https://res.cloudinary.com/db8xboovt/video/upload/v1771928601/Submissive_Princess_Video_Generated_jzophe.mp4" autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-50" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0D040A] via-transparent to-transparent" />
+                    </div>
+                     <h2 className="text-3xl sm:text-5xl font-black text-[#FCE4EC] italic tracking-tighter">The Altar of <span className="text-[#9C27B0] text-glow uppercase">Submission</span></h2>
+                     <div className="grid gap-6 sm:gap-12">
+                      {incomingOrders.sort((a,b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0)).map(order => (
+                        <div key={order.id} className="bg-[#16040C] p-6 sm:p-12 rounded-[2rem] sm:rounded-[5rem] border-l-[8px] sm:border-l-[16px] border-l-[#9C27B0] border border-[#FF2A6D]/10 shadow-2xl flex flex-col lg:flex-row lg:items-center justify-between gap-6 sm:gap-12">
+                          <div className="flex-1">
+                            <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
+                              <span className={`text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-full ${order.type === 'wishlist' ? 'bg-[#FF2A6D] text-white shadow-glow' : 'bg-[#9C27B0] text-white'}`}>{order.type === 'wishlist' ? 'FORBIDDEN DESIRE' : 'NEW COMMAND'}</span>
+                              <span className="text-[#B86688] text-[10px] font-black italic">From: <span className="text-[#F48FB1]">{order.pledgerName || 'Bella'}</span></span>
+                            </div>
+                            {order.type === 'wishlist' ? (
+                              <div className="bg-[#0A0206]/80 p-6 sm:p-10 rounded-[1.5rem] sm:rounded-[3rem] text-lg sm:text-2xl font-bold italic text-[#FCE4EC] shadow-inner relative overflow-hidden">
+                                <span className="absolute -top-1 left-6 bg-[#16040C] px-3 py-1 rounded-b-xl text-[8px] text-[#FF2A6D] font-black uppercase tracking-widest">Her Whisper</span>"{order.text}"
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap gap-3 sm:gap-5">
+                                {order.items?.map((it, idx) => (
+                                  <div key={idx} className="bg-[#0A0206]/80 px-5 sm:px-8 py-3 sm:py-5 rounded-2xl sm:rounded-[2rem] flex flex-col gap-1 border border-[#9C27B0]/20">
+                                    <div className="flex items-center gap-3 sm:gap-5">
+                                      <span className="bg-[#FF2A6D] w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 flex items-center justify-center rounded-xl text-xs sm:text-sm font-black text-white shadow-glow">{it.qty}</span>
+                                      <span className="text-base sm:text-xl font-bold text-[#FCE4EC] italic">{it.name}</span>
+                                    </div>
+                                    {it.options && <div className="pl-11 sm:pl-14 text-[8px] sm:text-[10px] text-[#B86688] font-black uppercase tracking-widest opacity-60">
+                                        {it.options.bound ? 'BODY CLAIMED' : (it.options.vow ? 'PALATE SILENCE' : 'CUSTOM SPECIFIED')}
+                                    </div>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right flex flex-col items-end">
+                            <p className="text-[9px] sm:text-[12px] text-[#884466] font-black uppercase tracking-widest mb-1 sm:mb-3">SACRIFICE TOTAL</p>
+                            <p className="text-4xl sm:text-6xl font-black text-[#FCE4EC] italic text-glow tabular-nums">${order.total?.toFixed(2)}</p>
+                            <button className="mt-4 sm:mt-8 bg-gradient-to-b from-[#9C27B0] to-[#4A142A] text-white h-14 sm:h-20 px-8 sm:px-12 rounded-2xl sm:rounded-[2.5rem] font-black flex items-center gap-3 sm:gap-5 hover:shadow-glow transition-all"><Heart size={20} className="sm:w-7 sm:h-7" /><span>FULFILL</span></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </main>
+
+              {customizingItem && (
+                <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6 font-black overflow-y-auto">
+                  <div className="fixed inset-0 bg-[#0A0206]/95 backdrop-blur-3xl" onClick={() => setCustomizingItem(null)} />
+                  <div className="relative bg-[#1A030C] border border-[#F48FB1]/30 p-6 sm:p-10 rounded-t-[2.5rem] sm:rounded-[4rem] w-full max-w-lg sm:max-w-4xl shadow-2xl animate-in slide-in-from-bottom sm:zoom-in max-h-[95vh] overflow-y-auto custom-scrollbar">
+                    <div className="flex items-center justify-between mb-8">
+                      <div className="max-w-[80%]">
+                        <h3 className="text-xl sm:text-3xl font-black italic text-[#FCE4EC] uppercase leading-tight">{customizingItem.name}</h3>
+                        <p className="text-[#AD6688] text-[10px] sm:text-sm italic mt-1 uppercase tracking-widest">Ritual Ritual</p>
+                      </div>
+                      <button onClick={() => setCustomizingItem(null)} className="p-3 bg-white/5 rounded-full text-[#884466]"><X size={20} /></button>
+                    </div>
+                    
+                    <div className="space-y-8 sm:space-y-10 pb-4">
+                      {customizingItem.isMasterBody && (
+                        <section className="bg-[#1A030C] border-2 border-[#FF2A6D] p-6 sm:p-10 rounded-3xl text-center shadow-glow">
+                          <Skull size={40} className="text-[#FF2A6D] mx-auto mb-4 animate-bounce" />
+                          <p className="text-[#FF2A6D] font-black uppercase tracking-widest text-sm mb-4">THE ULTIMATE SACRIFICE</p>
+                          <p className="text-[#FCE4EC] text-xs sm:text-sm italic mb-6 border-y border-[#FF2A6D]/20 py-4">"You forfeit all rights. Take every drop I force upon you. Acknowledge your desperation."</p>
+                          <button onClick={() => setVowOfSilence(!vowOfSilence)} className={`w-full py-5 rounded-2xl font-black text-[9px] sm:text-[11px] uppercase transition-all border-2 ${vowOfSilence ? 'bg-[#FF2A6D] text-white border-[#FF2A6D]' : 'bg-[#0A0206]/80 text-[#FF2A6D] border-[#FF2A6D]/50'}`}>{vowOfSilence ? 'OWNED AND BOUND' : 'I AM YOUR HELPLESS TOY'}</button>
+                        </section>
+                      )}
+                      {customizingItem.isAbsoluteOmakase && (
+                        <section className="bg-[#0A0206]/60 border border-[#FF2A6D]/30 p-6 sm:p-8 rounded-3xl text-center">
+                          <Lock size={32} className="text-[#FF2A6D] mx-auto mb-4" />
+                          <p className="text-[#FF2A6D] font-black uppercase text-[10px] mb-4 tracking-widest">Vow of Palate Silence</p>
+                          <p className="text-[#B86688] text-xs italic mb-6">"I surrender choice. My Master will decide my feast."</p>
+                          <button onClick={() => setVowOfSilence(!vowOfSilence)} className={`w-full py-4 rounded-2xl font-black text-[9px] uppercase border ${vowOfSilence ? 'bg-[#FF2A6D] text-white border-[#FF2A6D]' : 'bg-[#0A0206] text-[#884466] border-white/10'}`}>{vowOfSilence ? 'VOW RECORDED' : 'RECORD SILENCE'}</button>
+                        </section>
+                      )}
+                      {!customizingItem.isMasterBody && !customizingItem.isAbsoluteOmakase && (
+                        <div className="space-y-6 sm:space-y-8">
+                          {customizingItem.category === 'Drinks' && !customizingItem.hasJuiceChoice && (
+                            <div className="space-y-6">
+                              <div className="space-y-3">
+                                <p className="text-[#FF2A6D] font-black uppercase tracking-widest text-[9px]">Sugar Surrender</p>
+                                <div className="flex flex-wrap gap-2">{['0%', '50%', '100%'].map(s => (<button key={s} onClick={() => setSugarLevel(s)} className={`px-4 py-2 rounded-full text-[9px] font-black border transition-all ${sugarLevel === s ? 'bg-[#FF2A6D] text-white border-[#FF2A6D]' : 'bg-[#0A0206]/60 text-[#AD6688] border-white/10'}`}>{s}</button>))}</div>
+                              </div>
+                            </div>
+                          )}
+                          {customizingItem.hasMeatChoice && (
+                            <div className="space-y-3">
+                              <p className="text-[#FF2A6D] font-black uppercase tracking-widest text-[9px]">Flesh Sacrifice</p>
+                              <div className="flex flex-wrap gap-2">{['Chicken', 'Beef', 'Seafood'].map(m => (<button key={m} onClick={() => setMeatChoice(m)} className={`px-4 py-2 rounded-full text-[9px] font-black border transition-all ${meatChoice === m ? 'bg-[#FF2A6D] text-white border-[#FF2A6D]' : 'bg-[#0A0206]/60 text-[#AD6688] border-white/10'}`}>{m}</button>))}</div>
+                            </div>
+                          )}
+                          <div className="space-y-3">
+                            <p className="text-[#FF2A6D] font-black uppercase tracking-widest text-[9px] flex items-center gap-2"><ClipboardList size={12} /> Whisper Your Demands</p>
+                            <textarea value={specialRequest} onChange={(e) => setSpecialRequest(e.target.value)} placeholder="Specify any allergies or desires... 💋" className="w-full bg-[#0A0206]/60 border border-[#FF2A6D]/20 p-4 rounded-2xl text-white outline-none h-20 text-xs italic" />
+                          </div>
+                        </div>
+                      )}
+                      <button disabled={(customizingItem.isAbsoluteOmakase || customizingItem.isMasterBody) && !vowOfSilence} onClick={() => addToCartFinal(customizingItem, { sugar: customizingItem.category === 'Drinks' ? sugarLevel : null, meat: customizingItem.hasMeatChoice ? meatChoice : null, request: specialRequest, vow: vowOfSilence })} className={`w-full bg-gradient-to-r from-[#FF2A6D] via-[#9C27B0] to-[#FF2A6D] text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] h-14 ${(customizingItem.isAbsoluteOmakase || customizingItem.isMasterBody) && !vowOfSilence ? 'opacity-30' : 'shadow-glow'}`}>Confirm Specification</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {showDevotionTest && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                  <div className="absolute inset-0 bg-[#0A0206]/95 backdrop-blur-3xl" onClick={closeGameModal} />
+                  <div className="relative bg-[#1A030C] border border-[#FF2A6D]/50 rounded-[2.5rem] sm:rounded-[4rem] p-8 sm:p-14 w-full max-w-md shadow-2xl animate-in zoom-in text-center overflow-hidden">
+                     {devotionStatus === 'idle' && (
+                       <>
+                         <Flame size={40} className="text-[#FF2A6D] mx-auto mb-6 animate-pulse" />
+                         <h3 className="text-2xl sm:text-3xl font-black italic text-[#FCE4EC] mb-4 uppercase tracking-tighter">Prove Your Worth</h3>
+                         <p className="text-[#AD6688] text-xs italic leading-relaxed mb-8">Show me how pathetic your hunger is. Tap the button <span className="text-[#FF2A6D] font-black">25 times</span> in <span className="text-[#FF2A6D] font-black">5 seconds</span>. Break your fingers for my amusement.</p>
+                         <button onClick={handleStartGame} className="w-full bg-gradient-to-r from-[#FF2A6D] via-[#880E4F] to-[#FF2A6D] text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-glow">I AM ON MY KNEES</button>
+                       </>
+                     )}
+                     {devotionStatus === 'playing' && (
+                       <div className="animate-in fade-in duration-300">
+                         <p className="text-[8px] text-[#AD6688] font-black uppercase tracking-widest mb-1">Seconds to Disappointment</p>
+                         <p className={`text-5xl sm:text-6xl font-black italic text-[#FF2A6D] text-glow mb-6 tabular-nums ${timeLeft <= 2 ? 'animate-bounce text-[#F48FB1]' : ''}`}>{timeLeft.toFixed(1)}s</p>
+                         <div className="w-full bg-[#0A0206] rounded-full h-3 mb-8 overflow-hidden border border-[#FF2A6D]/40"><div className="bg-gradient-to-r from-[#880E4F] via-[#FF2A6D] to-[#F48FB1] h-full shadow-glow" style={{width: `${Math.min(100, (begs/25)*100)}%`}} /></div>
+                         <button onClick={handleBegAction} className="w-full bg-[#0A0206] border-4 border-[#FF2A6D] text-[#FF2A6D] py-10 rounded-[2.5rem] font-black text-2xl uppercase tracking-widest active:bg-[#FF2A6D] active:text-white transition-all select-none active:scale-95 flex flex-col items-center">
+                           <span>{getBegText(begs)}</span>
+                           <span className="text-[8px] tracking-widest opacity-40 mt-1">{begs} / 25</span>
+                         </button>
+                       </div>
+                     )}
+                     {devotionStatus === 'vocal' && (
+                       <div className="animate-in fade-in zoom-in-95 duration-700">
+                         <Mic size={48} className={`mx-auto mb-6 ${isListening ? 'text-[#FF2A6D] scale-110 shadow-glow' : 'text-[#880E4F]'}`} />
+                         <h3 className="text-2xl font-black italic text-[#FCE4EC] mb-2 uppercase text-glow">The Final Surrender</h3>
+                         <p className="text-[#FCE4EC] text-lg font-black italic mb-6 border-b border-[#FF2A6D]/20 pb-4">"Have you been a good girl?"</p>
+                         <p className="text-[10px] text-[#AD6688] italic mb-8 px-4">Whisper with absolute obedience:<br/><span className="text-[#FF2A6D] font-black text-base not-italic uppercase tracking-widest">"Yes Master"</span></p>
+                         <button onClick={startVocalTrial} disabled={isListening} className={`w-full py-5 rounded-2xl flex items-center justify-center gap-3 text-[10px] font-black tracking-widest ${isListening ? 'bg-[#FF2A6D] text-white shadow-glow' : 'bg-[#1A030C] border border-[#FF2A6D]/40 text-[#FF2A6D]'}`}>
+                           {isListening ? <Loader2 size={18} className="animate-spin" /> : <Mic size={18} />} {isListening ? 'LISTENING...' : 'SUBMIT VOW'}
+                         </button>
+                       </div>
+                     )}
+                     {devotionStatus === 'won' && (
+                       <div className="animate-in zoom-in duration-700">
+                         <Lock size={48} className="text-[#FF2A6D] mx-auto mb-4 shadow-glow" />
+                         <h3 className="text-3xl font-black italic text-[#FCE4EC] mb-4 tracking-tighter uppercase">Good Pet.</h3>
+                         <p className="text-[#AD6688] text-xs italic mb-8">Look at you, panting and desperate. Your carvings are now yours for <span className="text-[#FF2A6D] font-black">FREE</span>.</p>
+                         <button onClick={closeGameModal} className="w-full bg-[#FF2A6D] text-white py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-glow">KISS HIS HAND</button>
+                       </div>
+                     )}
+                     {devotionStatus === 'lost' && (
+                       <div className="animate-in fade-in duration-500">
+                         <X size={48} className="text-[#880E4F] mx-auto mb-4" />
+                         <h3 className="text-3xl font-black italic text-[#880E4F] mb-4 uppercase">Pathetic.</h3>
+                         <p className="text-[#AD6688] text-xs italic mb-8">Weak. Slow. You didn't even try. Pay full price like the insignificant little wallet you are.</p>
+                         <button onClick={closeGameModal} className="w-full bg-transparent border-2 border-[#880E4F] text-[#880E4F] py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest">ACCEPT PUNISHMENT</button>
+                       </div>
+                     )}
+                  </div>
+                </div>
+              )}
+
+              {isCartOpen && (
+                <div className="fixed inset-0 z-[150] font-black">
+                  <div className="absolute inset-0 bg-[#0A0206]/95 backdrop-blur-2xl" onClick={() => setIsCartOpen(false)} />
+                  <div className="absolute inset-y-0 right-0 w-full sm:max-w-md bg-[#16040C] shadow-2xl flex flex-col animate-in slide-in-from-right duration-700 border-l border-[#FF2A6D]/20 overflow-hidden">
+                    <div className="px-6 py-6 flex items-center justify-between border-b border-[#FF2A6D]/10 bg-[#0D0408]/80 sticky top-0 z-20">
+                        <h2 className="text-xl font-black italic text-[#FCE4EC] uppercase">THE TRAY</h2>
+                        <button onClick={() => setIsCartOpen(false)} className="p-2 bg-[#260714] rounded-full text-[#AD6688]"><X size={20} /></button>
+                    </div>
+                    {orderComplete ? (
+                      <div className="flex-1 flex flex-col items-center justify-center text-center p-8 animate-in zoom-in">
+                         <div className="w-16 h-16 bg-[#FF2A6D]/20 border border-[#FF2A6D] rounded-full flex items-center justify-center mb-6 shadow-glow text-[#FF2A6D]"><Check size={32} /></div>
+                         <h3 className="text-xl font-black italic text-[#FCE4EC] mb-2 uppercase">Ritual Complete</h3>
+                         <p className="text-[#AD6688] text-xs italic opacity-70">Sent into the abyss. Wait for his decree. 💋</p>
+                      </div>
+                    ) : (
+                      <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col">
+                        <div className="p-4 space-y-4 flex-grow">
+                          {cart.length === 0 ? (
+                            <div className="h-40 flex flex-col items-center justify-center opacity-20 text-[#FF2A6D]"><ShoppingBag size={40} /><p className="mt-4 font-black italic text-sm">The tray is empty...</p></div>
+                          ) : (
+                            cart.map(item => (
+                              <div key={item.cartId} className="flex gap-4 items-center bg-[#0A0206]/80 p-4 rounded-2xl border border-[#FF2A6D]/10 relative overflow-hidden transition-all hover:bg-[#1A030C]">
+                                <div className="flex-1 min-w-0 z-10">
+                                  <p className="font-black text-sm text-[#FCE4EC] italic leading-tight mb-1 truncate uppercase">{item.name}</p>
+                                  <p className="text-[#FF2A6D] font-black text-[9px] uppercase tracking-widest">Sacrifice: ${(item.price * item.quantity).toFixed(2)}</p>
+                                </div>
+                                <div className="flex items-center gap-3 bg-[#16040C] p-1.5 rounded-xl border border-[#FF2A6D]/10 z-10 flex-shrink-0">
+                                  <button onClick={() => { if (item.quantity === 1) setCart(prev => prev.filter(i => i.cartId !== item.cartId)); else setCart(prev => prev.map(i => i.cartId === item.cartId ? {...i, quantity: i.quantity - 1} : i)); }} className="text-[#884466] hover:text-[#FF2A6D]"><Minus size={14} /></button>
+                                  <span className="font-black text-[#FCE4EC] w-4 text-center text-xs">{item.quantity}</span>
+                                  <button onClick={() => setCart(prev => prev.map(i => i.cartId === item.cartId ? {...i, quantity: i.quantity + 1} : i))} className="text-[#884466] hover:text-[#FF2A6D]"><Plus size={14} /></button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        {cart.length > 0 && (
+                          <div className="p-6 border-t border-[#FF2A6D]/20 bg-[#0D0408]/80 space-y-6">
+                            <div className="flex justify-between items-center text-xl font-black text-[#FCE4EC] italic tracking-tight">
+                              <span className="text-[#AD6688] text-[9px] uppercase tracking-widest not-italic">TOTAL SACRIFICE</span>
+                              <div className="flex flex-col items-end gap-0.5">
+                                {hasVoucher && <span className="text-[#AD6688] text-xs line-through opacity-40">${(cartSubtotal + 2.99).toFixed(2)}</span>}
+                                <span className="text-[#F48FB1] tabular-nums">{hasVoucher ? 'FREE' : `$${cartTotalDisplay.toFixed(2)}`}</span>
+                              </div>
+                            </div>
+                            {hasVoucher ? (
+                              <button disabled={isOrdering} onClick={handlePlaceOrder} className="w-full bg-gradient-to-r from-[#FF2A6D] via-[#9C27B0] to-[#880E4F] text-white py-5 rounded-2xl font-black text-lg tracking-widest italic active:scale-95 transition-all flex items-center justify-center gap-3 shadow-glow">{isOrdering ? <Loader2 className="animate-spin" size={20} /> : <><span className="mt-0.5 uppercase">Command Him</span> <Flame size={20} fill="currentColor" /></>}</button>
+                            ) : (
+                              <div className="space-y-4">
+                                 <button onClick={() => setShowDevotionTest(true)} className="w-full bg-[#1A030C] border border-[#FF2A6D]/40 text-[#FF2A6D] py-4 rounded-xl font-black uppercase text-[9px] tracking-widest transition-all flex items-center justify-center gap-2"><Heart size={14} /> Beg Master (Free)</button>
+                                 <div className="bg-[#0A0206]/60 p-4 rounded-2xl border border-[#330044] space-y-3">
+                                   <p className="text-[#AD6688] text-[8px] uppercase tracking-widest font-black flex items-center gap-1 opacity-70"><CreditCard size={12}/> Pay with Plastic</p>
+                                   <input type="text" placeholder="Card Number" value={ccDetails.number} onChange={e => setCcDetails({...ccDetails, number: e.target.value})} className="w-full bg-[#1A030C] border border-[#330044] px-4 py-2 rounded-lg text-xs outline-none text-white" />
+                                   <div className="flex gap-2">
+                                     <input type="text" placeholder="MM/YY" value={ccDetails.expiry} onChange={e => setCcDetails({...ccDetails, expiry: e.target.value})} className="w-1/2 bg-[#1A030C] border border-[#330044] px-4 py-2 rounded-lg text-xs outline-none text-white" />
+                                     <input type="text" placeholder="CVC" value={ccDetails.cvc} onChange={e => setCcDetails({...ccDetails, cvc: e.target.value})} className="w-1/2 bg-[#1A030C] border border-[#330044] px-4 py-2 rounded-lg text-xs outline-none text-white" />
+                                   </div>
+                                   <button onClick={handleCCSubmit} disabled={isCcProcessing} className="w-full bg-[#330044]/50 text-[#AD6688] py-3 rounded-xl font-black uppercase text-[8px] tracking-widest flex items-center justify-center">{isCcProcessing ? <Loader2 className="animate-spin" size={12} /> : "Submit Currency"}</button>
+                                 </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3 sm:gap-4 font-black">
+                <div className="flex gap-3 sm:gap-4 font-black">
+                  <button onClick={() => { setIsInstaPortalOpen(!isInstaPortalOpen); setIsPortalOpen(false); }} className={`p-4 sm:p-6 rounded-full shadow-2xl transition-all border border-[#FF2A6D]/20 ${isInstaPortalOpen ? 'bg-[#FF2A6D] text-white shadow-glow' : 'bg-[#1A030C] text-[#AD6688]'}`}><Instagram size={22} className="sm:w-7 sm:h-7" /></button>
+                  <button onClick={() => { setIsPortalOpen(!isPortalOpen); setIsInstaPortalOpen(false); }} className={`p-4 sm:p-6 rounded-full shadow-2xl transition-all border border-[#FF2A6D]/20 ${isPortalOpen ? 'bg-[#FF2A6D] text-white shadow-glow' : 'bg-[#1A030C] text-[#AD6688]'}`}>{isPortalOpen ? <X size={22} className="sm:w-7 sm:h-7" /> : <MessageCircle size={22} className="sm:w-7 sm:h-7" />}</button>
+                </div>
+              </div>
+              <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,900;1,400;1,900&family=Montserrat:wght@400;900&display=swap');
+                :root { font-family: 'Playfair Display', serif; }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .text-glow { text-shadow: 0 0 15px rgba(255, 42, 109, 0.6); }
+                .shadow-glow { filter: drop-shadow(0 0 10px rgba(255, 42, 109, 0.4)); }
+                .scrollbar-hide::-webkit-scrollbar { display: none; }
+                .custom-scrollbar::-webkit-scrollbar { width: 3px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: #0D0408; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF2A6D33; border-radius: 10px; }
+              `}</style>
+            </div>
+          );
+        }
+
+          return (
+            <React.Fragment>
+              <audio ref={audioRef} src="https://res.cloudinary.com/db8xboovt/video/upload/v1771934322/RINI_-_Red_Lights_ft._Wale_Official_Lyric_Video_odxpkl.mp3" loop preload="auto" autoPlay />
+              {content}
+            </React.Fragment>
+          );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
